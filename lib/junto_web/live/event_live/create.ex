@@ -1,4 +1,4 @@
-defmodule JuntoWeb.EventLive.NewEvent do
+defmodule JuntoWeb.EventLive.Create do
   use JuntoWeb, :live_view
   alias JuntoWeb.CoreComponentsBackup
 
@@ -20,8 +20,11 @@ defmodule JuntoWeb.EventLive.NewEvent do
   }
   @impl true
   def mount(_params, _session, socket) do
+    event_params = create_params()
+
     {:ok,
      assign(socket,
+       form: to_form(event_params, as: :event),
        gmap_suggested_places: [],
        place: nil,
        selected_scope: :public,
@@ -113,8 +116,12 @@ defmodule JuntoWeb.EventLive.NewEvent do
   defp event_title_input(assigns) do
     ~H"""
     <div class="min-h-12">
+      <pre class="w-60">
+    </pre>
+      <div class="sr-only">Event name</div>
       <textarea
-        id="titleTextarea"
+        id={@form[:name].id}
+        name={@form[:name].name}
         autofocus
         autocapitalize="words"
         spellcheck="false"
@@ -122,9 +129,12 @@ defmodule JuntoWeb.EventLive.NewEvent do
         placeholder="Event Name"
         onInput="this.parentNode.dataset.clonedVal = this.value"
         row="2"
-      />
+      ><%= @form[:name].value %></textarea>
+      <%= if @form[:name].errors != [] do %>
+        <div data-role={"error-#{@form[:name].id}"} class="sr-only">Error: fill in name</div>
+      <% end %>
       <script>
-        const textarea = document.getElementById('titleTextarea');
+        const textarea = document.getElementById('event_name');
         //TODO: move it out of here
         textarea.addEventListener('input', () => {
         if (textarea.scrollHeight < 50) return;
@@ -379,7 +389,6 @@ defmodule JuntoWeb.EventLive.NewEvent do
 
   def modal2(assigns) do
     ~H"""
-
     """
   end
 
@@ -502,6 +511,12 @@ defmodule JuntoWeb.EventLive.NewEvent do
   end
 
   @impl true
+  def handle_event("create-event", %{"event" => event_params}, socket) do
+    form = to_form(event_params, as: :event, errors: [name: {"Invalid", []}])
+    {:noreply, assign(socket, :form, form)}
+  end
+
+  @impl true
   def handle_info(:reset_map_rerender, socket) do
     {:noreply, assign(socket, :force_rerender_map, false)}
   end
@@ -513,5 +528,19 @@ defmodule JuntoWeb.EventLive.NewEvent do
 
   defp get_gmaps_id do
     "300ffa0564ebe9c7"
+  end
+
+  defp create_params do
+    now = DateTime.utc_now()
+    later = DateTime.add(now, 1, :hour)
+
+    %{
+      "name" => nil,
+      "scope" => :public,
+      "start_datetime" => now,
+      "end_datetime" => later,
+      "timezone" => "UTC",
+      "description" => ""
+    }
   end
 end
